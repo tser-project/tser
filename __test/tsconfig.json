@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2015",
+    "module": "commonjs",
+    "allowJs": false,
+    "lib": [
+      "es2015"
+    ],
+    "outDir": "dist",
+    "rootDir": "input/",
+    "sourceMap": false,
+    "esModuleInterop": true,
+  },
+  "include": [
+    "input/**/*",
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ]
+}

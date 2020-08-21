@@ -1,0 +1,7 @@
+#cmakedefine CMAKE_BUILD_TYPE @CMAKE_BUILD_TYPE@
+#cmakedefine LLVM_BUILD_DEBUG @LLVM_BUILD_DEBUG@
+#cmakedefine TSER_TARGET_MAC @TSER_TARGET_MAC@
+#ifdef CMAKE_BUILD_TYPE
+#define DEBUG
+#else
+#endif
