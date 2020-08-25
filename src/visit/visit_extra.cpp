@@ -14,6 +14,25 @@ using namespace antlr4;
 using namespace llvm;
 using namespace antlr4::tree;
 
+/// visit expressionSequence
+antlrcpp::Any ModuleVisitor::visitExpressionSequence(TypeScriptParser::ExpressionSequenceContext *ctx) {
+  DebugPrintln("[visitExpressionSequence] IsPreCheck: %d ; text: %s", IsPrecheckStep(), ctx->getText().data());
+
+  if (IsPrecheckStep()) {
+    return visitChildren(ctx);
+  }
+
+  auto children = ctx->singleExpression();
+
+  unique_ptr<NodeValue> result = nullptr;
+
+  for (auto child : children) {
+    result = move(visit(child).as<unique_ptr<NodeValue>>());
+  }
+  return result;
+}
+
+/// visit assignable
 antlrcpp::Any ModuleVisitor::visitAssignable(TypeScriptParser::AssignableContext *ctx) {
   DebugPrintln("[visitAssignable] IsPreCheck: %d ; text: %s", IsPrecheckStep(), ctx->getText().data());
   return make_unique<NodeValue>(ctx->Identifier()->getText());
@@ -29,10 +48,6 @@ antlrcpp::Any ModuleVisitor::visitStatement(TypeScriptParser::StatementContext *
   return defaultResult();
 }
 
-antlrcpp::Any ModuleVisitor::visitVariableStatement(TypeScriptParser::VariableStatementContext *ctx) {
-  return visitChildren(ctx);
-}
-
 antlrcpp::Any ModuleVisitor::visitVarModifier(TypeScriptParser::VarModifierContext *ctx) {
   return visitChildren(ctx);
 }
@@ -44,11 +59,6 @@ antlrcpp::Any ModuleVisitor::visitVariableDeclarationList(TypeScriptParser::Vari
 antlrcpp::Any ModuleVisitor::visitExpressionStatement(TypeScriptParser::ExpressionStatementContext *ctx) {
   return visitChildren(ctx);
 }
-
-antlrcpp::Any ModuleVisitor::visitExpressionSequence(TypeScriptParser::ExpressionSequenceContext *ctx) {
-  return visitChildren(ctx);
-}
-
 antlrcpp::Any ModuleVisitor::visitGetter(TypeScriptParser::GetterContext *ctx) {
   return visitChildren(ctx);
 }

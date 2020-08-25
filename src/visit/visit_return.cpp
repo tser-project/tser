@@ -41,16 +41,17 @@ antlrcpp::Any ModuleVisitor::visitReturnStatement(TypeScriptParser::ReturnStatem
   auto return_value_info =
       unique_ptr<LlvmValueInfo>(TypeCastToTarget(scope, builder, return_info->type, node_value->GetLlvmValueInfo()));
 
+  auto return_value = scope->LoadToRegister(builder, return_value_info.get());
+
   /// only one return statement: return directly.
   if (!func_scope->HasBranch() || !func_scope->IsMultiReturn()) {
-    auto return_value = scope->LoadToRegister(builder, return_value_info.get());
     builder->CreateRet(return_value);
 
     return defaultResult();
   }
 
   /// multi return statement: save to return pointer, then switch to return block
-  builder->CreateStore(return_value_info->value, return_info->value);
+  builder->CreateStore(return_value, return_info->value);
   builder->CreateBr(func_scope->GetReturnBlock());
 
   if (scope->IsBlock()) {

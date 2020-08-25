@@ -24,7 +24,8 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace filesystem;
 
-string GetExecutablePath() {
+/// get tser executeable file path
+string GetTserExecutablePath() {
   char path[ FILE_PATH_SIZE ];
 #ifdef TSER_TARGET_MAC
   unsigned _size = FILE_PATH_SIZE;
@@ -41,9 +42,15 @@ string GetExecutablePath() {
   return path;
 }
 
-string tser::fsutils::GetPathStartFromProject(int size, string paths[]) {
+/// get tser executeable project path
+string GetTserRootPath() {
+  return filesystem::canonical(GetTserExecutablePath()).parent_path().parent_path();
+}
 
-  auto project_path = filesystem::canonical(GetExecutablePath()).parent_path().parent_path();
+/// get path in tser project
+string tser::fsutils::GetPathInTser(int size, string paths[]) {
+
+  auto project_path = filesystem::canonical(GetTserRootPath());
   for (int i = 0; i < size; i++) {
     if (paths[ i ] == "..") {
       project_path = project_path.parent_path();
@@ -54,6 +61,7 @@ string tser::fsutils::GetPathStartFromProject(int size, string paths[]) {
   return project_path;
 }
 
+/// get path from current path of terminal
 string tser::fsutils::GetPathStartFromCurrent(int size, string paths[]) {
 
   auto current_path = filesystem::current_path();
@@ -67,10 +75,13 @@ string tser::fsutils::GetPathStartFromCurrent(int size, string paths[]) {
   return current_path;
 }
 
-unique_ptr<Module> tser::fsutils::ReadFile(TserProcess *process, char *file_path, LLVMContext &context,
-                                           const DataLayout &dataLayout) {
+unique_ptr<Module> tser::fsutils::CreateModuleFromFile(TserProcess *process, char *file_path, LLVMContext &context,
+                                                       const DataLayout &dataLayout) {
 
   DebugPrintln("file path: %s", file_path);
+
+  string module_name = file_path;
+  DebugPrintln("module name: %s", module_name.data());
 
   ifstream ifs;
   ifs.open(file_path);
@@ -91,7 +102,7 @@ unique_ptr<Module> tser::fsutils::ReadFile(TserProcess *process, char *file_path
 
   tree::ParseTree *tree = parser.program();
 
-  auto module = make_unique<Module>(file_path, context);
+  auto module = make_unique<Module>(module_name, context);
   module->setDataLayout(dataLayout);
   module->setTargetTriple(sys::getDefaultTargetTriple());
 

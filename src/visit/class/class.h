@@ -56,17 +56,16 @@ class ClassInfo : public ReferenceInfo {
   ReferencePropertyValue *GetProperty(string key);
 
   public:
-  Value *                LoadProperty(Value *this_value, IRBuilder<> *builder, string key);
-  FunctionVariableValue *LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key);
+  ReferencePropertyValue *LoadProperty(Value *this_value, IRBuilder<> *builder, string key);
+  ReferenceMethodValue *  LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key);
 
   protected:
-  virtual void InitVariables(ModuleVisitor *visitor, Scope *scope, Value *this_value);
+  virtual void InitVariables(ModuleVisitor *, Scope *, Value *this_value);
 
   public:
+  virtual void InitStaticProperties(ModuleVisitor *);
   virtual void CreateDefaultConstructor(ModuleVisitor *visitor);
   virtual void CallCustomConstructor(IRBuilder<> *builder, Value *this_value, vector<Value *> arguments);
-
-  public:
   virtual void SetCustomConstructor(FunctionVariableValue *custom_constructor) {
     this->custom_constructor = custom_constructor;
   }

@@ -28,8 +28,20 @@ antlrcpp::Any ModuleVisitor::visitArguments(TypeScriptParser::ArgumentsContext *
   return arguments;
 }
 
+/// visit one argument
 antlrcpp::Any ModuleVisitor::visitArgument(TypeScriptParser::ArgumentContext *ctx) {
-  return visitChildren(ctx);
+
+  Scope *scope = GetScope(ctx);
+  if (IsPrecheckStep()) {
+    return visitChildren(ctx);
+  }
+
+  /// must load value right now, for keep arguments' run order
+  auto result = move(visitChildren(ctx).as<unique_ptr<NodeValue>>());
+  scope->NodeValueInitLlvmValueInfo(builder, result.get());
+  result->GetLlvmValueInfo()->value = scope->LoadToRegister(builder, result->GetLlvmValueInfo());
+  result->GetLlvmValueInfo()->SetValueIsPointer(false);
+  return make_unique<NodeValue>(result->GetLlvmValueInfo()->clone());
 }
 
 antlrcpp::Any ModuleVisitor::visitFormalParameterList(TypeScriptParser::FormalParameterListContext *ctx) {

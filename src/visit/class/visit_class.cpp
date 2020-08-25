@@ -66,7 +66,7 @@ antlrcpp::Any ModuleVisitor::visitClassTail(TypeScriptParser::ClassTailContext *
 
   if (IsPrecheckStep()) {
 
-    /// Step 1: visit properties first (should skip static property)
+    /// Step 1: visit properties first (include static property)
     while (it != elements.end()) {
       if (dynamic_cast<TypeScriptParser::ClassPropertyDefinitionContext *>(*it)) {
         visit(*it);
@@ -119,10 +119,20 @@ antlrcpp::Any ModuleVisitor::visitClassTail(TypeScriptParser::ClassTailContext *
     return defaultResult();
   }
 
-  /// Step 1: visit body again, to init properties and methods, and create custom contructor
-  visitChildren(ctx);
+  /// Skip visit properties (will init while CreateDefaultConstructor and InitStaticProperties)
 
-  /// Step 2: create default constructor
+  /// Step 1: init static properties
+  class_info->InitStaticProperties(this);
+
+  /// Step 2 : visit other children
+  while (it != elements.end()) {
+    if (!dynamic_cast<TypeScriptParser::ClassPropertyDefinitionContext *>(*it)) {
+      visit(*it);
+    }
+    it++;
+  }
+
+  /// Step 3: create default constructor (need properties and methods)
   class_info->CreateDefaultConstructor(this);
 
   return defaultResult();
@@ -134,10 +144,10 @@ antlrcpp::Any ModuleVisitor::visitConstructorDefinition(TypeScriptParser::Constr
   auto class_info = (ClassInfo *)GetReferenceInfo(ctx);
 
   if (IsPrecheckStep()) {
-    auto scope            = new FunctionScope(ctx, GetModuleScope(), class_info->GetCustomConstroctorName());
-    auto value            = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
-    value->access_control = AccessControl::Public;
-    value->scope          = scope;
+    auto scope   = new FunctionScope(ctx, GetModuleScope(), class_info->GetCustomConstroctorName());
+    auto value   = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
+    value->scope = scope;
+    value->SetAccessControl(AccessControl::Public);
     value->SetUsingThis(true);
 
     auto func_value_info = unique_ptr<LlvmValueInfo>(CreateFunction(class_info->GetTypeName(), scope, this,
@@ -185,9 +195,9 @@ antlrcpp::Any ModuleVisitor::visitClassPropertyDefinition(TypeScriptParser::Clas
 
     auto value = new ReferencePropertyValue(scope, type_sign);
     if (ctx->accessControl()) {
-      value->access_control = visitAccessControl(ctx->accessControl());
+      value->SetAccessControl(visitAccessControl(ctx->accessControl()));
     }
-    value->is_static = PropertyIsStatic(ctx->propertyControl());
+    value->SetIsStatic(PropertyIsStatic(ctx->propertyControl()));
 
     if (ctx->singleExpression()) {
       // don't set value
@@ -217,13 +227,13 @@ antlrcpp::Any ModuleVisitor::visitNormalMethodDefinition(TypeScriptParser::Norma
     // store function definition to ir, and don't visit body, or other function' call inside it will
     // cann't find target.
 
-    auto value            = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
-    value->access_control = visitAccessControl(ctx->accessControl());
-    value->is_async       = !!ctx->Async();
-    value->scope          = scope;
-    value->is_static      = FunctionIsStatic(ctx->functionControl());
-    value->is_final       = FunctionIsFinal(ctx->functionControl());
-    value->SetUsingThis(!value->is_static);
+    auto value   = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
+    value->scope = scope;
+    value->SetAccessControl(visitAccessControl(ctx->accessControl()));
+    value->SetIsAsync(!!ctx->Async());
+    value->SetIsStatic(FunctionIsStatic(ctx->functionControl()));
+    value->SetIsFinal(FunctionIsFinal(ctx->functionControl()));
+    value->SetUsingThis(!value->IsStatic());
 
     auto func_value_info = unique_ptr<LlvmValueInfo>(CreateFunction(
         class_info->GetTypeName(), scope, this, value->UsingThis() ? class_info->GetReferenceStructType() : nullptr,

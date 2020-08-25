@@ -14,14 +14,9 @@ string float_to_string(double v) {
   return oss.str();
 }
 
-string float_to_string(float v) {
-  ostringstream oss;
-  oss << v;
-  return oss.str();
-}
-
 string ArgsToString(int length, VariableType *types, va_list args) {
   string result = "";
+  void * ptr    = nullptr;
   for (int i = 0; i < length; i++) {
     switch (*types) {
       case VariableType::Boolean:
@@ -41,6 +36,10 @@ string ArgsToString(int length, VariableType *types, va_list args) {
         break;
       case VariableType::String:
         result.append(va_arg(args, char *));
+        break;
+      case VariableType::Reference:
+        ptr = va_arg(args, void *);
+        result.append(ptr ? "[Reference Type]" : "null");
         break;
       default:
         result.append("unknow");

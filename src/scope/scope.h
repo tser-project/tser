@@ -66,6 +66,7 @@ class Scope {
   virtual Scope *        FindTagetScope(string key);
   virtual FunctionScope *GetParentFunctionScope();
   virtual FunctionScope *GetWrapFunctionScope();
+  virtual BlockScope *   GetWrapBlockScope();
   virtual BlockScope *   GetWrapLoopBlockScope(string name = "");
 
   public:
@@ -254,7 +255,7 @@ class BlockScope : public Scope {
 
   private:
   /// for: break continue statement in (`for` `while`)
-  BasicBlock *trunk_block         = nullptr; // always be merge branch, which to jump to when finished
+  BasicBlock *merge_block         = nullptr; // always be merge branch, which to jump to when finished
   BasicBlock *condition_block     = nullptr;
   BasicBlock *continue_jump_block = nullptr;
 
@@ -276,11 +277,11 @@ class BlockScope : public Scope {
   bool HasJumpedOut() {
     return has_jumped_out;
   }
-  void SetTrunkBlock(BasicBlock *trunk_block) {
-    this->trunk_block = trunk_block;
+  void SetMergeBlock(BasicBlock *merge_block) {
+    this->merge_block = merge_block;
   }
-  BasicBlock *GetTrunkBlock() {
-    return trunk_block;
+  BasicBlock *GetMergeBlock() {
+    return merge_block;
   }
   void SetConditionBlock(BasicBlock *condition_block) {
     this->condition_block = condition_block;

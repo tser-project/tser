@@ -53,7 +53,7 @@ antlrcpp::Any ModuleVisitor::visitIfStatement(TypeScriptParser::IfStatementConte
 
   // if statement scope
   builder->SetInsertPoint(ThenBB);
-  if_scope->SetTrunkBlock(MergeBB);
+  if_scope->SetMergeBlock(MergeBB);
   visitStatement(ctx->statement(0));
   if (!if_scope->HasJumpedOut()) {
     builder->CreateBr(MergeBB);
@@ -65,7 +65,7 @@ antlrcpp::Any ModuleVisitor::visitIfStatement(TypeScriptParser::IfStatementConte
     BlockScope *pure_else_scope = nullptr;
     if (else_is_pure_else) {
       pure_else_scope = (BlockScope *)GetScope(ctx->statement(1));
-      pure_else_scope->SetTrunkBlock(MergeBB);
+      pure_else_scope->SetMergeBlock(MergeBB);
     }
     visitStatement(ctx->statement(1));
     if (!pure_else_scope || !pure_else_scope->HasJumpedOut()) {

@@ -9,7 +9,7 @@ add_compile_options(-std=c++17)
 add_compile_options(-stdlib=libc++)
 
 # mark llvm is built for debug
-set(LLVM_BUILD_DEBUG true)
+set(LLVM_BUILD_DEBUG false)
 set(TSER_TARGET_MAC true)
 
 set(ANTLR_EXECUTABLE $ENV{ANTLR_EXECUTABLE})

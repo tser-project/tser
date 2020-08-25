@@ -61,6 +61,7 @@ Constant *GetDefaultValue(LLVMContext &context, TypeSignInfo *type);
 Constant *   GetConstantNumber(VariableType type, LLVMContext &context, int64_t value);
 Constant *   GetConstantNumber(VariableType type, LLVMContext &context, string value);
 ConstantInt *GetConstantInt(LLVMContext &context, int value = 0);
+Value *      CreateGlobalLlvmValue(ModuleVisitor *, string name, VariableValue *target, LlvmValueInfo *init_value);
 
 /// change type to LLVM Type
 Type *VariableTypeToLLVMType(LLVMContext &context, TypeSignInfo *);
@@ -124,9 +125,15 @@ void LoadReferenceMethodArgs(ModuleVisitor *visitor, ReferenceInfo *class_info, 
 
 namespace tser {
 namespace fsutils {
-string GetPathStartFromProject(int size, string paths[]);
+
+/// get path in tser project
+string GetPathInTser(int size, string paths[]);
+
+/// get path from current path of terminal
 string GetPathStartFromCurrent(int size, string paths[]);
 
-unique_ptr<Module> ReadFile(TserProcess *process, char *file_path, LLVMContext &context, const DataLayout &dataLayout);
+/// create llvm module from file
+unique_ptr<Module> CreateModuleFromFile(TserProcess *process, char *file_path, LLVMContext &context,
+                                        const DataLayout &dataLayout);
 } // namespace fsutils
 }; // namespace tser

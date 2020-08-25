@@ -21,19 +21,22 @@ antlrcpp::Any ModuleVisitor::visitArgumentsExpression(TypeScriptParser::Argument
   DebugPrintln("[visitArgumentsExpression] IsPreCheck: %d ; text: %s", IsPrecheckStep(), ctx->getText().data());
   Scope *scope = GetScope(ctx);
 
-  if (IsPrecheckStep()) {
-    return visitChildren(ctx);
-  }
-
-  auto func_node = move(visit(ctx->singleExpression()).as<unique_ptr<NodeValue>>());
-
   FunctionVariableValue *func_var_value = nullptr;
 
-  // DELETE
+  auto func_node = move(visit(ctx->singleExpression()).as<unique_ptr<NodeValue>>());
   if (func_node->IsString()) {
     func_var_value = (FunctionVariableValue *)scope->GetVariableValue(func_node->GetStringValue());
   } else if (func_node->IsLlvmValueInfo()) {
     func_var_value = func_node->GetLlvmValueInfo()->GetFunctionVariableValue();
+  }
+
+  if (IsPrecheckStep()) {
+    visitArguments(ctx->arguments());
+    if (func_var_value->GetReturnValue()) {
+      return make_unique<NodeValue>(new LlvmValueInfo(func_var_value->GetReturnValue()->type->clone(), nullptr, false));
+    } else {
+      return defaultResult();
+    }
   }
 
   // aruguments of function
@@ -51,7 +54,14 @@ antlrcpp::Any ModuleVisitor::visitArgumentsExpression(TypeScriptParser::Argument
   if (!added_parent_variables_value && func_var_value->UsingThis()) {
     auto func_wrapper = func_node->GetLlvmValueInfo()->GetFunctionValueWrapper();
     if (func_wrapper && func_wrapper->GetThis()) {
-      all_arguments.push_back(builder->CreateLoad(func_wrapper->GetThis()->value));
+
+      Value *this_value = nullptr;
+      if (func_wrapper->GetThis()->ValueIsPointer()) {
+        this_value = builder->CreateLoad(func_wrapper->GetThis()->value);
+      } else {
+        this_value = func_wrapper->GetThis()->value;
+      }
+      all_arguments.push_back(this_value);
     }
   }
 
@@ -59,8 +69,7 @@ antlrcpp::Any ModuleVisitor::visitArgumentsExpression(TypeScriptParser::Argument
 
   if (real_arguments.size() > 0) {
     for (auto &temp_node_value : real_arguments) {
-      scope->NodeValueInitLlvmValueInfo(builder, temp_node_value.get());
-      all_arguments.push_back(scope->LoadToRegister(builder, temp_node_value->GetLlvmValueInfo()));
+      all_arguments.push_back(temp_node_value->GetLlvmValueInfo()->value);
     }
   }
   llvm::Function *func_value = (llvm::Function *)(func_var_value->value);
@@ -76,6 +85,7 @@ antlrcpp::Any ModuleVisitor::visitArgumentsExpression(TypeScriptParser::Argument
   } else {
     result_value = builder->CreateCall(func_value);
   }
+
   return make_unique<NodeValue>(
       new LlvmValueInfo(func_var_value->GetReturnValue()->type->clone(), result_value, false));
 }

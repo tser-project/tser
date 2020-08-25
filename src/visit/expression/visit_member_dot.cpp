@@ -58,28 +58,34 @@ antlrcpp::Any ModuleVisitor::visitMemberDotExpression(TypeScriptParser::MemberDo
   if (left_value_info->IsReferenceInfo()) {
     /// for static method and property
     if (reference_info->IsMethod(right_id)) {
-      FunctionVariableValue *func_var_value = reference_info->LoadMethod(nullptr, builder, right_id);
+      auto func_var_value = reference_info->LoadMethod(nullptr, builder, right_id);
 
       return make_unique<NodeValue>(new LlvmValueInfo(func_var_value, true));
     } else if (reference_info->IsProperty(right_id)) {
-      /// TODO: for static property
-      throw CurrentNotSupportException("static property");
+      auto prop_var_value = reference_info->LoadProperty(nullptr, builder, right_id);
+      return make_unique<NodeValue>(new LlvmValueInfo(prop_var_value));
     }
-  } else if (left_value_info->type->type == VariableType::Reference) {
-    Value *this_pointer = scope->LoadToRegister(builder, left_value_info);
+  }
+
+  if (left_value_info->type->type == VariableType::Reference) {
+    Value *this_pointer    = scope->LoadToRegister(builder, left_value_info);
+    left_value_info->value = this_pointer;
+    left_value_info->SetValueIsPointer(false);
     if (reference_info->IsMethod(right_id)) {
-      FunctionVariableValue *func_var_value = reference_info->LoadMethod(this_pointer, builder, right_id);
-      auto                   result_info    = new LlvmValueInfo(func_var_value, true);
+      auto func_var_value = reference_info->LoadMethod(this_pointer, builder, right_id);
+      auto result_info    = new LlvmValueInfo(func_var_value, true);
+      /// Get matched this
       if (func_var_value->UsingThis()) {
-        result_info->SetFunctionValueWrapper(
-            new FunctionValueWrapper(new LlvmValueInfo(left_value_info->type->clone(), left_value_info->value)));
+        auto target_type     = make_unique<TypeSignInfo>(VariableType::Reference, func_var_value->GetReferenceInfo());
+        auto this_value_info = TypeCastToTarget(scope, builder, target_type.get(), left_value_info);
+        result_info->SetFunctionValueWrapper(new FunctionValueWrapper(this_value_info));
       }
       return make_unique<NodeValue>(result_info);
 
     } else if (reference_info->IsProperty(right_id)) {
-      auto   value_info = reference_info->GetProperty(right_id);
-      Value *value      = reference_info->LoadProperty(this_pointer, builder, right_id);
-      return make_unique<NodeValue>(new LlvmValueInfo(value_info->type->clone(), value, true));
+      auto value_info   = reference_info->GetProperty(right_id);
+      auto return_value = reference_info->LoadProperty(this_pointer, builder, right_id);
+      return make_unique<NodeValue>(new LlvmValueInfo(return_value));
     }
   }
 

@@ -142,6 +142,18 @@ FunctionScope *Scope::GetWrapFunctionScope() {
   return nullptr;
 }
 
+BlockScope *Scope::GetWrapBlockScope() {
+  Scope *     target      = this;
+  BlockScope *block_scope = nullptr;
+  while (target) {
+    if (target->IsBlock()) {
+      return (BlockScope *)target;
+    }
+    target = target->parent_scope;
+  }
+  return nullptr;
+}
+
 BlockScope *Scope::GetWrapLoopBlockScope(string name) {
   Scope *     target      = this;
   BlockScope *block_scope = nullptr;
@@ -271,29 +283,7 @@ VariableValue *ModuleScope::CheckVariable(string key) {
 /// @param init_value: cannot be nullptr
 /// @return { X* } : return value is pointer type
 Value *ModuleScope::StoreLlvmValue(ModuleVisitor *visitor, string key, LlvmValueInfo *init_value) {
-  assert(init_value != nullptr);
-
-  auto var_value     = GetVariableValue(key);
-  auto var_llvm_type = VariableTypeToLLVMType(visitor->builder->getContext(), var_value->type);
-  auto new_value     = init_value->value;
-
-  if (!new_value || !isa<Constant>(new_value)) {
-    new_value = GetDefaultValue(visitor->GetLLVMContext(), var_value->type);
-  }
-
-  if (!new_value) {
-    throw ValueNotMatchException("empty variable declaration value");
-  }
-
-  GlobalValue::LinkageTypes link_type = GlobalValue::LinkageTypes::InternalLinkage;
-  auto value       = new GlobalVariable(*visitor->module, var_llvm_type, false, link_type, (Constant *)new_value, key);
-  var_value->value = value;
-
-  if (init_value->value && init_value->value != new_value) {
-    visitor->builder->CreateStore(init_value->value, value);
-  }
-
-  return var_value->value;
+  return CreateGlobalLlvmValue(visitor, key, GetVariableValue(key), init_value);
 }
 
 LlvmValueInfo *ModuleScope::LoadAsLlvmValueInfo(IRBuilder<> *builder, string key) {

@@ -33,27 +33,32 @@ antlrcpp::Any ModuleVisitor::visitFunctionDeclaration(TypeScriptParser::Function
 
     scope->SetFunctionVariableValue(var_value);
     parent_scope->DefineVariable(origin_func_name, var_value);
-    return visitChildren(ctx);
+
+    visitChildren(ctx);
+
+    scope->CreateParentVariablesStructType(GetLLVMContext());
+
+    /// create function
+    auto func_value_info = unique_ptr<LlvmValueInfo>(CreateFunction(
+        "", scope, this, scope->GetParentVariablesStructType(), ctx->formalParameterList(), ctx->typeSign()));
+    var_value->value     = func_value_info->value;
+    var_value->SetReturnValue(new LlvmValueInfo(func_value_info->type->clone(), nullptr));
+
+    return make_unique<NodeValue>(new LlvmValueInfo(var_value, true));
   }
 
   FunctionScope *scope = GetWrapFunctionScope(ctx);
-  scope->CreateParentVariablesStructType(GetLLVMContext());
 
-  auto func_value_info = unique_ptr<LlvmValueInfo>(CreateFunction(
-      "", scope, this, scope->GetParentVariablesStructType(), ctx->formalParameterList(), ctx->typeSign()));
-
-  auto var_value   = (FunctionVariableValue *)parent_scope->GetVariableValue(origin_func_name);
-  var_value->value = func_value_info->value;
-  var_value->SetReturnValue(new LlvmValueInfo(func_value_info->type->clone(), nullptr));
+  auto var_value = (FunctionVariableValue *)parent_scope->GetVariableValue(origin_func_name);
 
   BasicBlock *oldBB = builder->GetInsertBlock();
 
-  LoadFunctionArgs(this, scope, (Function *)func_value_info->value, ctx->formalParameterList());
+  LoadFunctionArgs(this, scope, (Function *)var_value->value, ctx->formalParameterList());
 
   visitFunctionBody(ctx->functionBody());
 
   builder->SetInsertPoint(oldBB);
-  return defaultResult();
+  return make_unique<NodeValue>(new LlvmValueInfo(var_value, true));
 }
 
 antlrcpp::Any ModuleVisitor::visitFunctionBody(TypeScriptParser::FunctionBodyContext *ctx) {

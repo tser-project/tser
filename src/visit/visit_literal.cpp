@@ -73,8 +73,6 @@ antlrcpp::Any ModuleVisitor::visitNumericLiteral(TypeScriptParser::NumericLitera
   VariableType type  = GetNumericLiteralType(text, ctx);
   auto         value = new LlvmValueInfo(new TypeSignInfo(type), false);
   value->value       = GetConstantNumber(type, GetLLVMContext(), text);
-  cout << "dump:" << endl;
-  value->value->dump();
 
   return make_unique<NodeValue>(value);
 }

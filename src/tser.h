@@ -227,6 +227,7 @@ class VariableValue {
 
   private:
   bool value_is_pointer = true;
+  bool is_const         = false;
 
   public:
   VariableValue(Scope *scope, TypeSignInfo *type)
@@ -242,11 +243,17 @@ class VariableValue {
   virtual ~VariableValue();
 
   public:
-  void SetValueIsPointer(bool value_is_pointer) {
-    this->value_is_pointer = value_is_pointer;
+  bool IsConst() {
+    return this->is_const;
+  }
+  void SetIsConst(bool is_const) {
+    this->is_const = is_const;
   }
   bool ValueIsPointer() {
     return value_is_pointer;
+  }
+  void SetValueIsPointer(bool value_is_pointer) {
+    this->value_is_pointer = value_is_pointer;
   }
   void ResetType(TypeSignInfo *type) {
     if (this->type) {

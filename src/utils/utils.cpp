@@ -624,18 +624,16 @@ void tser::LoadReferenceMethodArgs(ModuleVisitor *visitor, ReferenceInfo *class_
 
 Constant *tser::GetConstantNumber(VariableType type, LLVMContext &context, int64_t value) {
   switch (type) {
+    case VariableType::Boolean:
+      return ConstantInt::get(Type::getInt1Ty(context), value);
     case VariableType::Int32:
       return ConstantInt::get(Type::getInt32Ty(context), value);
-      break;
     case VariableType::Int64:
       return ConstantInt::get(Type::getInt64Ty(context), value);
-      break;
     case VariableType::Float:
       return ConstantFP::get(Type::getFloatTy(context), (float)value);
-      break;
     case VariableType::Double:
       return ConstantFP::get(Type ::getDoubleTy(context), (double)(value));
-      break;
     default:
       break;
   }
@@ -664,6 +662,35 @@ Constant *tser::GetConstantNumber(VariableType type, LLVMContext &context, strin
 
 ConstantInt *tser::GetConstantInt(LLVMContext &context, int value) {
   return ConstantInt::get(Type::getInt32Ty(context), value);
+}
+
+/// create global value
+Value *tser::CreateGlobalLlvmValue(ModuleVisitor *visitor, string name, VariableValue *target,
+                                   LlvmValueInfo *init_value) {
+  assert(init_value != nullptr);
+
+  auto var_llvm_type = VariableTypeToLLVMType(visitor->builder->getContext(), target->type);
+  auto new_value     = init_value->value;
+
+  if (!new_value || !isa<Constant>(new_value)) {
+    new_value = GetDefaultValue(visitor->GetLLVMContext(), target->type);
+  }
+
+  if (!new_value) {
+    throw ValueNotMatchException("empty variable declaration value");
+  }
+
+  GlobalValue::LinkageTypes link_type = GlobalValue::LinkageTypes::InternalLinkage;
+  auto                      value =
+      new GlobalVariable(*visitor->module, var_llvm_type, target->IsConst(), link_type, (Constant *)new_value, name);
+  target->value = value;
+  target->SetValueIsPointer(true);
+
+  if (init_value->value && init_value->value != new_value) {
+    visitor->builder->CreateStore(init_value->value, value);
+  }
+
+  return target->value;
 }
 
 bool tser::IsFunctionLastReturnStatement(TypeScriptParser::ReturnStatementContext *ctx) {

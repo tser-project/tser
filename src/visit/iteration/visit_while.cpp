@@ -36,7 +36,8 @@ antlrcpp::Any ModuleVisitor::visitDoStatement(TypeScriptParser::DoStatementConte
   BasicBlock *ConditionBB = BasicBlock::Create(GetLLVMContext(), "");
   BasicBlock *MergeBB     = BasicBlock::Create(GetLLVMContext(), "");
 
-  scope->SetTrunkBlock(MergeBB);
+  scope->SetMergeBlock(MergeBB);
+  scope->SetContinueJumpBlock(ConditionBB);
 
   builder->CreateBr(StatementBB);
   builder->SetInsertPoint(StatementBB);
@@ -80,7 +81,8 @@ antlrcpp::Any ModuleVisitor::visitWhileStatement(TypeScriptParser::WhileStatemen
   BasicBlock *StatementBB = BasicBlock::Create(GetLLVMContext(), "");
   BasicBlock *MergeBB     = BasicBlock::Create(GetLLVMContext(), "");
 
-  scope->SetTrunkBlock(MergeBB);
+  scope->SetMergeBlock(MergeBB);
+  scope->SetContinueJumpBlock(ConditionBB);
 
   builder->CreateBr(ConditionBB);
   builder->SetInsertPoint(ConditionBB);

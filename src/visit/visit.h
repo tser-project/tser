@@ -252,7 +252,9 @@ class ModuleVisitor : public TypeScriptParserBaseVisitor {
 
   antlrcpp::Any visitTernaryExpression(TypeScriptParser::TernaryExpressionContext *ctx);
 
-  // antlrcpp::Any visitLogicalAndExpression(TypeScriptParser::LogicalAndExpressionContext *ctx);
+  antlrcpp::Any visitLogicalAndExpression(TypeScriptParser::LogicalAndExpressionContext *ctx);
+
+  antlrcpp::Any visitLogicalOrExpression(TypeScriptParser::LogicalOrExpressionContext *ctx);
 
   // antlrcpp::Any visitPowerExpression(TypeScriptParser::PowerExpressionContext *ctx);
 
@@ -261,8 +263,6 @@ class ModuleVisitor : public TypeScriptParserBaseVisitor {
   // antlrcpp::Any visitMetaExpression(TypeScriptParser::MetaExpressionContext *ctx);
 
   // antlrcpp::Any visitInExpression(TypeScriptParser::InExpressionContext *ctx);
-
-  // antlrcpp::Any visitLogicalOrExpression(TypeScriptParser::LogicalOrExpressionContext *ctx);
 
   antlrcpp::Any visitNotExpression(TypeScriptParser::NotExpressionContext *ctx);
 
@@ -310,8 +310,7 @@ class ModuleVisitor : public TypeScriptParserBaseVisitor {
 
   // antlrcpp::Any visitBitShiftExpression(TypeScriptParser::BitShiftExpressionContext *ctx);
 
-  // antlrcpp::Any visitParenthesizedExpression(TypeScriptParser::ParenthesizedExpressionContext
-  // *ctx);
+  antlrcpp::Any visitParenthesizedExpression(TypeScriptParser::ParenthesizedExpressionContext *ctx);
 
   antlrcpp::Any visitRelationalExpression(TypeScriptParser::RelationalExpressionContext *ctx);
 

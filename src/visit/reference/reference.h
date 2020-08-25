@@ -19,25 +19,54 @@ enum AccessControl {
   Private,
 };
 
+class ReferenceInfo;
+
 class ReferencePropertyValue : public tser::VariableValue {
   public:
   using VariableValue::VariableValue;
 
-  public:
-  AccessControl access_control;
-  bool          is_static = false;
-  bool          is_final  = false;
-  bool          is_const  = false;
-
   private:
   ParseTree *tree_node = nullptr;
 
+  private:
+  AccessControl access_control;
+  bool          is_static = false;
+  bool          is_final  = false;
+
   public:
-  void SetTreeNode(ParseTree *node) {
-    this->tree_node = node;
+  ReferencePropertyValue *cloneWithoutValue() {
+    auto obj   = new ReferencePropertyValue(scope, type->clone());
+    obj->scope = this->scope;
+    obj->SetIsStatic(this->IsStatic());
+    obj->SetIsFinal(this->IsFinal());
+    obj->SetIsConst(this->IsConst());
+    return obj;
+  }
+
+  public:
+  bool IsStatic() {
+    return this->is_static;
+  }
+  void SetIsStatic(bool is_static) {
+    this->is_static = is_static;
+  }
+  bool IsFinal() {
+    return this->is_final;
+  }
+  void SetIsFinal(bool is_final) {
+    this->is_final = is_final;
+  }
+  AccessControl GetAccessControl() {
+    return access_control;
+  }
+  void SetAccessControl(AccessControl access_control) {
+    this->access_control = access_control;
   }
   ParseTree *GetTreeNode() {
     return tree_node;
+  }
+  void SetTreeNode(ParseTree *node) {
+    this->tree_node = node;
   }
 };
 
@@ -45,21 +74,24 @@ class ReferenceMethodValue : public FunctionVariableValue {
   public:
   using FunctionVariableValue::FunctionVariableValue;
 
-  public:
+  private:
+  ReferenceInfo *reference_info = nullptr;
+
+  private:
   AccessControl access_control;
   bool          is_static = false;
   bool          is_final  = false;
-  bool          is_const  = false;
   bool          is_async  = false;
 
   public:
   ReferenceMethodValue *cloneWithoutValue() {
-    auto obj       = new ReferenceMethodValue(scope, type->clone());
-    obj->scope     = this->scope;
-    obj->is_static = this->is_static;
-    obj->is_final  = this->is_final;
-    obj->is_const  = this->is_const;
-    obj->is_async  = this->is_async;
+    auto obj   = new ReferenceMethodValue(scope, type->clone());
+    obj->scope = this->scope;
+    obj->SetIsStatic(this->IsStatic());
+    obj->SetIsFinal(this->IsFinal());
+    obj->SetIsAsync(this->IsAsync());
+    obj->SetReferenceInfo(this->GetReferenceInfo());
+    obj->SetIsConst(this->IsConst());
     obj->SetUsingThis(this->UsingThis());
     obj->SetReturnValue(
         new LlvmValueInfo(this->GetReturnValue()->type->clone(), this->GetReturnValue()->ValueIsPointer()));
@@ -67,35 +99,35 @@ class ReferenceMethodValue : public FunctionVariableValue {
   }
 
   public:
-  void SetIsStatic(bool is_static) {
-    this->is_static = is_static;
+  ReferenceInfo *GetReferenceInfo() {
+    return reference_info;
   }
-  void SetIsFinal(bool is_final) {
-    this->is_final = is_final;
-  }
-  void SetIsConst(bool is_const) {
-    this->is_const = is_const;
-  }
-  void SetIsAsync(bool is_async) {
-    this->is_async = is_async;
-  }
-  void SetAccessControl(AccessControl access_control) {
-    this->access_control = access_control;
+  void SetReferenceInfo(ReferenceInfo *reference_info) {
+    this->reference_info = reference_info;
   }
   bool IsStatic() {
     return this->is_static;
   }
+  void SetIsStatic(bool is_static) {
+    this->is_static = is_static;
+  }
   bool IsFinal() {
     return this->is_final;
   }
-  bool IsConst() {
-    return this->is_const;
+  void SetIsFinal(bool is_final) {
+    this->is_final = is_final;
   }
   bool IsAsync() {
     return this->is_async;
   }
+  void SetIsAsync(bool is_async) {
+    this->is_async = is_async;
+  }
   AccessControl GetAccessControl() {
     return access_control;
+  }
+  void SetAccessControl(AccessControl access_control) {
+    this->access_control = access_control;
   }
 };
 
@@ -118,25 +150,25 @@ class ReferenceInfo {
 
   protected:
   map<string, ReferencePropertyValue *> properties;
-  vector<string>                        property_queue; // no parent's properties
+  vector<string>                        property_queue; // no parent's properties, no static properties
   map<string, var_index>                property_queue_index;
 
   protected:
-  map<string, FunctionVariableValue *> methods;
-  vector<string>                       method_queue;
+  map<string, ReferenceMethodValue *> methods;
+  vector<string>                      method_queue;
 
   public:
   virtual void                    CheckVariable(Scope *scope, string key);
   virtual void                    DefineProperty(string key, ReferencePropertyValue *);
-  virtual void                    DefineMethod(string key, FunctionVariableValue *);
-  virtual FunctionVariableValue * GetMethod(string key);
-  virtual ReferencePropertyValue *GetProperty(string key);
+  virtual void                    DefineMethod(string key, ReferenceMethodValue *);
   virtual bool                    IsMethod(string key);
   virtual bool                    IsProperty(string key);
+  virtual ReferenceMethodValue *  GetMethod(string key);
+  virtual ReferencePropertyValue *GetProperty(string key);
 
   public:
-  virtual Value *                LoadProperty(Value *this_value, IRBuilder<> *builder, string key);
-  virtual FunctionVariableValue *LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key);
+  virtual ReferencePropertyValue *LoadProperty(Value *this_value, IRBuilder<> *builder, string key);
+  virtual ReferenceMethodValue *  LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key);
 
   protected:
   StructType *reference_struct_type = nullptr;
@@ -151,6 +183,7 @@ class ReferenceInfo {
   FunctionVariableValue *default_constructor = nullptr;
 
   public:
+  virtual void   InitStaticProperties(ModuleVisitor *){};
   virtual Value *CreateInstance(ModuleVisitor *visitor);
   virtual void   CreateDefaultConstructor(ModuleVisitor *visitor);
   virtual void   CallDefaultConstructor(ModuleVisitor *visitor, Value *this_value);

@@ -44,7 +44,7 @@ antlrcpp::Any ModuleVisitor::visitSwitchStatement(TypeScriptParser::SwitchStatem
   }
 
   BasicBlock *MergeBB = BasicBlock::Create(GetLLVMContext(), "");
-  scope->SetTrunkBlock(MergeBB); // for return and break statement
+  scope->SetMergeBlock(MergeBB); // for return and break statement
 
   set<BasicBlock *> VisitedClauseCaseBBs; // used to avoid repeatedly visit of statementList of case block
   map<int, TypeScriptParser::ExpressionSequenceContext *> case_conditions;

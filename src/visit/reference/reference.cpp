@@ -57,10 +57,10 @@ void ReferenceInfo::CreateDefaultConstructor(ModuleVisitor *visitor) {
   auto func_value_info = unique_ptr<LlvmValueInfo>(
       CreateFunction(GetTypeName(), scope, visitor, GetReferenceStructType(), nullptr, nullptr));
 
-  auto value            = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
-  value->access_control = AccessControl::Private;
-  value->value          = func_value_info->value;
-  value->scope          = scope;
+  auto value = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
+  value->SetAccessControl(AccessControl::Private);
+  value->value = func_value_info->value;
+  value->scope = scope;
   value->SetUsingThis(true);
 
   scope->SetFunctionVariableValue(value);
@@ -93,31 +93,68 @@ void ReferenceInfo::CreateDefaultConstructor(ModuleVisitor *visitor) {
 }
 
 /// @param { %class.X * } this_pointer
-Value *ReferenceInfo::LoadProperty(Value *this_pointer, IRBuilder<> *builder, string property) {
-  auto property_src_value = GetProperty(property);
-  auto index              = property_queue_index[ property ];
-  auto target_value =
+ReferencePropertyValue *ReferenceInfo::LoadProperty(Value *this_pointer, IRBuilder<> *builder, string property) {
+  auto prop_value   = GetProperty(property);
+  auto return_value = prop_value->cloneWithoutValue();
+  if (prop_value->IsStatic()) {
+    return_value->value = prop_value->value;
+    return return_value;
+  }
+  auto index = GetPropertyStartIndex() + property_queue_index[ property ];
+  return_value->value =
       builder->CreateInBoundsGEP(this_pointer, {ConstantInt::get(Type::getInt32Ty(builder->getContext()), 0),
                                                 ConstantInt::get(Type::getInt32Ty(builder->getContext()), index)});
-  return target_value;
+
+  return return_value;
 }
 
 /// @param { %class.X * } this_pointer
-FunctionVariableValue *ReferenceInfo::LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key) {
+ReferenceMethodValue *ReferenceInfo::LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key) {
   return GetMethod(key);
 }
 
-bool ReferenceInfo::IsMethod(string key) {
-  if (methods.count(key) > 0) {
-    return true;
-  }
-  return false;
-}
-bool ReferenceInfo::IsProperty(string key) {
+void ReferenceInfo::DefineProperty(string key, ReferencePropertyValue *value) {
   if (properties.count(key) > 0) {
-    return true;
+    return;
   }
-  return false;
+  properties[ key ] = value;
+  if (!value->IsStatic()) {
+    property_queue.push_back(key);
+    property_queue_index[ key ] = property_queue.size() - 1;
+  }
+}
+
+void ReferenceInfo::DefineMethod(string key, ReferenceMethodValue *value) {
+  if (methods.count(key) > 0) {
+    return;
+  }
+  value->SetReferenceInfo(this);
+  methods[ key ] = value;
+  if (!value->IsStatic()) {
+    method_queue.push_back(key);
+  }
+}
+
+bool ReferenceInfo::IsMethod(string key) {
+  return GetMethod(key) != nullptr;
+}
+
+bool ReferenceInfo::IsProperty(string key) {
+  return GetProperty(key) != nullptr;
+}
+
+ReferenceMethodValue *ReferenceInfo::GetMethod(string key) {
+  if (methods.count(key) > 0) {
+    return methods[ key ];
+  }
+  return nullptr;
+}
+
+ReferencePropertyValue *ReferenceInfo::GetProperty(string key) {
+  if (properties.count(key) > 0) {
+    return properties[ key ];
+  }
+  return nullptr;
 }
 
 void ReferenceInfo::CheckVariable(Scope *scope, string key) {
@@ -130,31 +167,6 @@ void ReferenceInfo::CheckVariable(Scope *scope, string key) {
     return;
   }
   throw VariableNotFoundException(key);
-}
-
-void ReferenceInfo::DefineProperty(string key, ReferencePropertyValue *value) {
-  if (properties.count(key) > 0) {
-    return;
-  }
-  properties[ key ] = value;
-  property_queue.push_back(key);
-  property_queue_index[ key ] = property_queue.size() - 1;
-}
-
-void ReferenceInfo::DefineMethod(string key, FunctionVariableValue *value) {
-  if (methods.count(key) > 0) {
-    return;
-  }
-  methods[ key ] = value;
-  method_queue.push_back(key);
-}
-
-FunctionVariableValue *ReferenceInfo::GetMethod(string key) {
-  return methods[ key ];
-}
-
-ReferencePropertyValue *ReferenceInfo::GetProperty(string key) {
-  return properties[ key ];
 }
 
 ReferenceInfo::~ReferenceInfo() {

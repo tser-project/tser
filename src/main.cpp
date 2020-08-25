@@ -37,7 +37,7 @@ int main(int argc, char *argv[], char *scope[]) {
 
   auto jit = ExitOnErr(LLJITBuilder()
                            .setJITTargetMachineBuilder(std::move(JTMB))
-                           .setObjectLinkingLayerCreator([ & ](ExecutionSession &ES, const Triple &TT) {
+                           .setObjectLinkingLayerCreator([&](ExecutionSession &ES, const Triple &TT) {
                              auto ll =
                                  make_unique<ObjectLinkingLayer>(ES, make_unique<jitlink::InProcessMemoryManager>());
                              ll->setOverrideObjectFlagsWithResponsibilityFlags(true);
@@ -54,7 +54,7 @@ int main(int argc, char *argv[], char *scope[]) {
 
   /// add builtin file
   string builtin_file_path[] = {"lib", "builtin.o"};
-  string builtin_file        = fsutils::GetPathStartFromProject(GetArrayLen(builtin_file_path), builtin_file_path);
+  string builtin_file        = fsutils::GetPathInTser(GetArrayLen(builtin_file_path), builtin_file_path);
   Error  err = jit->addObjectFile(ExitOnErr(errorOrToExpected(MemoryBuffer::getFileAsStream(builtin_file.data()))));
   if (err) {
     cerr << "[Error] Read tser's builtin file error" << endl;
@@ -67,7 +67,8 @@ int main(int argc, char *argv[], char *scope[]) {
   /// read input file
   string input_paths[] = {argv[ 1 ]};
   string input_path    = fsutils::GetPathStartFromCurrent(1, input_paths);
-  auto   module = fsutils::ReadFile(process.get(), input_path.data(), *context.getContext(), jit->getDataLayout());
+  auto   module =
+      fsutils::CreateModuleFromFile(process.get(), input_path.data(), *context.getContext(), jit->getDataLayout());
 
   if (!module) {
     return 1;

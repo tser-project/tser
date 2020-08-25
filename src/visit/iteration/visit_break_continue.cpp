@@ -24,7 +24,7 @@ antlrcpp::Any ModuleVisitor::visitBreakStatement(TypeScriptParser::BreakStatemen
   auto loop_scope = scope->GetWrapLoopBlockScope();
 
   if (loop_scope) {
-    builder->CreateBr(loop_scope->GetTrunkBlock());
+    builder->CreateBr(loop_scope->GetMergeBlock());
     if (scope->IsBlock()) {
       BlockScope *block_scope = (BlockScope *)scope;
       block_scope->SetHasJumpedOut(true, ctx);

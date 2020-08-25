@@ -23,9 +23,14 @@ antlrcpp::Any ModuleVisitor::visitVariableDeclaration(TypeScriptParser::Variable
 
   if (IsPrecheckStep()) {
 
+    auto var_statement = (TypeScriptParser::VariableStatementContext *)ctx->parent->parent;
+
+    bool is_const = !!var_statement->varModifier()->Const();
+
     TypeSignInfo *type_sign = visitTypeSign(ctx->typeSign());
 
     auto var_value = new VariableValue(scope, type_sign);
+    var_value->SetIsConst(is_const);
 
     scope->DefineVariable(left_node->GetStringValue(), var_value);
     if (ctx->singleExpression()) {
@@ -40,9 +45,6 @@ antlrcpp::Any ModuleVisitor::visitVariableDeclaration(TypeScriptParser::Variable
     auto right_node = move(visit(ctx->singleExpression()).as<unique_ptr<NodeValue>>());
     scope->NodeValueInitLlvmValueInfo(builder, right_node.get());
 
-    cout << "dump-2:" << endl;
-    right_node->GetLlvmValueInfo()->value->dump();
-
     right_node->GetLlvmValueInfo()->value = scope->LoadToRegister(builder, right_node->GetLlvmValueInfo());
     right_node->GetLlvmValueInfo()->SetValueIsPointer(false);
 
@@ -53,9 +55,6 @@ antlrcpp::Any ModuleVisitor::visitVariableDeclaration(TypeScriptParser::Variable
 
     auto new_value =
         unique_ptr<LlvmValueInfo>(TypeCastToTarget(scope, builder, var_value->type, right_node->GetLlvmValueInfo()));
-
-    cout << "dump-3:" << endl;
-    new_value->value->dump();
 
     scope->StoreLlvmValue(this, left_node->GetStringValue(), new_value.get());
 
@@ -94,4 +93,8 @@ antlrcpp::Any ModuleVisitor::visitAssignmentExpression(TypeScriptParser::Assignm
   builder->CreateStore(new_value->value, left_node->GetLlvmValueInfo()->value);
 
   return make_unique<NodeValue>(left_node->GetLlvmValueInfo()->clone());
+}
+
+antlrcpp::Any ModuleVisitor::visitVariableStatement(TypeScriptParser::VariableStatementContext *ctx) {
+  return visitChildren(ctx);
 }

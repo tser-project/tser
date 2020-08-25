@@ -16,32 +16,53 @@ void ClassInfo::InitVariables(ModuleVisitor *visitor, Scope *scope, Value *this_
     GetSuperClass()->InitVariables(visitor, scope, parent_this);
   }
 
-  ReferencePropertyValue *property_src_value  = nullptr;
-  Value *                 target_value        = nullptr;
-  var_index               index               = 0;
-  int                     property_root_index = GetPropertyStartIndex();
-  Value *                 zero_index          = GetConstantInt(visitor->GetLLVMContext(), 0);
+  ReferencePropertyValue *property_src_value = nullptr;
+  Value *                 target_value       = nullptr;
+  var_index               index              = 0;
+  Value *                 zero_index         = GetConstantInt(visitor->GetLLVMContext(), 0);
+  /// not-static property initial to current instance in constructor
   for (auto property : property_queue) {
     property_src_value = GetProperty(property);
-    Value *value       = nullptr;
     /// visit property node to save value to `this`
-    if (property_src_value->GetTreeNode()) {
-      auto node_value = move(visitor->visit(property_src_value->GetTreeNode()).as<unique_ptr<NodeValue>>());
-      scope->NodeValueInitLlvmValueInfo(builder, node_value.get());
-      value = node_value->GetLlvmValueInfo()->value;
-    }
-    if (!value) {
+    if (!property_src_value->GetTreeNode()) {
       continue;
     }
+    auto node_value = move(visitor->visit(property_src_value->GetTreeNode()).as<unique_ptr<NodeValue>>());
+    scope->NodeValueInitLlvmValueInfo(builder, node_value.get());
+    Value *value = scope->LoadToRegister(visitor->builder, node_value->GetLlvmValueInfo());
+
+    /// store to instance
     index        = property_queue_index[ property ];
     target_value = builder->CreateInBoundsGEP(
         this_value,
-        {zero_index, ConstantInt::get(Type::getInt32Ty(visitor->GetLLVMContext()), property_root_index + index)});
+        {zero_index, ConstantInt::get(Type::getInt32Ty(visitor->GetLLVMContext()), GetPropertyStartIndex() + index)});
     builder->CreateStore(value, target_value);
   }
 }
 
+void ClassInfo::InitStaticProperties(ModuleVisitor *visitor) {
+  IRBuilder<> *builder = visitor->builder;
+  auto         scope   = visitor->GetModuleScope();
+
+  ReferencePropertyValue *property_src_value = nullptr;
+  for (auto prop : properties) {
+    property_src_value = prop.second;
+    if (!property_src_value->IsStatic() || !property_src_value->GetTreeNode() || property_src_value->value) {
+      continue;
+    }
+    /// static property using global variable
+    auto node_value = move(visitor->visit(property_src_value->GetTreeNode()).as<unique_ptr<NodeValue>>());
+    scope->NodeValueInitLlvmValueInfo(builder, node_value.get());
+    node_value->GetLlvmValueInfo()->value = scope->LoadToRegister(visitor->builder, node_value->GetLlvmValueInfo());
+    node_value->GetLlvmValueInfo()->SetValueIsPointer(false);
+
+    CreateGlobalLlvmValue(visitor, GetTypeName() + ".static." + prop.first, property_src_value,
+                          node_value->GetLlvmValueInfo());
+  }
+}
+
 void ClassInfo::CreateDefaultConstructor(ModuleVisitor *visitor) {
+
   if (!HasMapTable()) {
     return ReferenceInfo::CreateDefaultConstructor(visitor);
   }
@@ -54,10 +75,10 @@ void ClassInfo::CreateDefaultConstructor(ModuleVisitor *visitor) {
   auto func_value_info = unique_ptr<LlvmValueInfo>(
       CreateFunction(GetTypeName(), scope, visitor, GetReferenceStructType(), nullptr, nullptr));
 
-  auto value            = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
-  value->access_control = AccessControl::Private;
-  value->value          = func_value_info->value;
-  value->scope          = scope;
+  auto value = new ReferenceMethodValue(scope, new TypeSignInfo(VariableType::Function));
+  value->SetAccessControl(AccessControl::Private);
+  value->value = func_value_info->value;
+  value->scope = scope;
   value->SetUsingThis(true);
 
   scope->SetFunctionVariableValue(value);
@@ -107,9 +128,9 @@ void ClassInfo::CreateDefaultConstructor(ModuleVisitor *visitor) {
 }
 
 /// @param { %class.X * } this_pointer
-Value *ClassInfo::LoadProperty(Value *this_pointer, IRBuilder<> *builder, string key) {
+ReferencePropertyValue *ClassInfo::LoadProperty(Value *this_pointer, IRBuilder<> *builder, string key) {
 
-  if (!HasMapTable()) {
+  if (!HasMapTable() || !PropertyIsInheritAble(key)) {
     return ReferenceInfo::LoadProperty(this_pointer, builder, key);
   }
 
@@ -136,11 +157,13 @@ Value *ClassInfo::LoadProperty(Value *this_pointer, IRBuilder<> *builder, string
   temp_value = builder->CreateInBoundsGEP(temp_value, {offset});
   temp_value = builder->CreateBitCast(temp_value, type->getPointerTo());
 
-  return temp_value;
+  auto return_value   = GetProperty(key)->cloneWithoutValue();
+  return_value->value = temp_value;
+  return return_value;
 }
 
 /// @param { %class.X * } this_pointer
-FunctionVariableValue *ClassInfo::LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key) {
+ReferenceMethodValue *ClassInfo::LoadMethod(Value *this_pointer, IRBuilder<> *builder, string key) {
 
   if (!HasMapTable() || !MethodIsInheritAble(key)) {
     return ReferenceInfo::LoadMethod(this_pointer, builder, key);
@@ -197,7 +220,11 @@ void ClassInfo::CreateVariablesStructType(ModuleVisitor *visitor) {
   /// init property 'type'
   ReferencePropertyValue *pro = nullptr;
   for (auto pro_name : property_queue) {
-    pro        = (ReferencePropertyValue *)properties[ pro_name ];
+    if (!PropertyIsInheritAble(pro_name)) {
+      /// skip static property
+      continue;
+    }
+    pro        = properties[ pro_name ];
     Type *type = VariableTypeToLLVMType(visitor->GetLLVMContext(), pro->type);
     // TODO: read tser::var_index size to llvm-type
     if (!super_property_map_table_index || super_property_map_table_index->count(pro_name) == 0) {
@@ -222,13 +249,15 @@ void ClassInfo::CreateVariablesStructType(ModuleVisitor *visitor) {
   /// create main struct type
   reference_struct_type = StructType::create(visitor->GetLLVMContext(), class_struct_type_args, GetTypeName());
 
-  int property_root_index = GetPropertyStartIndex();
-
   /// create constant: property map-table
   for (auto pro_name : property_queue) {
+    if (!PropertyIsInheritAble(pro_name)) {
+      /// skip static property
+      continue;
+    }
     auto offset = visitor->module->getDataLayout()
                       .getStructLayout(reference_struct_type)
-                      ->getElementOffset(property_root_index + property_queue_index[ pro_name ]);
+                      ->getElementOffset(GetPropertyStartIndex() + property_queue_index[ pro_name ]);
     Constant *offset_value = ConstantInt::get(GetOffsetType(visitor->GetLLVMContext()), offset);
     if (!super_property_map_table_index || super_property_map_table_index->count(pro_name) == 0) {
       property_map_table_value_queue_cache.push_back(offset_value);
@@ -268,6 +297,8 @@ void ClassInfo::CreateMethodsMapTable(ModuleVisitor *visitor) {
       method_map_table_index[ method_name ] = method_map_table_types_cache.size() - 1;
       method_map_table_value_queue_cache.push_back((Function *)(method->value));
     } else {
+      method_map_table_types_cache[ method_map_table_index[ method_name ] ] =
+          ((Function *)(method->value))->getFunctionType()->getPointerTo();
       method_map_table_value_queue_cache[ method_map_table_index[ method_name ] ] = (Function *)(method->value);
     }
   }
@@ -285,22 +316,37 @@ void ClassInfo::CreateMethodsMapTable(ModuleVisitor *visitor) {
 }
 
 ReferenceMethodValue *ClassInfo::GetMethod(string key) {
-  return (ReferenceMethodValue *)ReferenceInfo::GetMethod(key);
+  auto class_info = this;
+  while (class_info) {
+    if (class_info->methods.count(key) > 0) {
+      return class_info->methods[ key ];
+    }
+    class_info = class_info->GetSuperClass();
+  }
+  return nullptr;
 }
 ReferencePropertyValue *ClassInfo::GetProperty(string key) {
-  return (ReferencePropertyValue *)ReferenceInfo::GetProperty(key);
+  auto class_info = this;
+  while (class_info) {
+    if (class_info->properties.count(key) > 0) {
+      return class_info->properties[ key ];
+    }
+    class_info = class_info->GetSuperClass();
+  }
+  return nullptr;
 }
 
 bool ClassInfo::MethodIsInheritAble(string key) {
   auto method = GetMethod(key);
-  if (!method || method->is_static || method->is_final || method->access_control == AccessControl::Private) {
+  if (!method || method->IsStatic() || method->IsFinal() || method->GetAccessControl() == AccessControl::Private) {
     return false;
   }
   return true;
 }
 bool ClassInfo::PropertyIsInheritAble(string key) {
   auto property = GetProperty(key);
-  if (!property || property->is_static || property->is_final || property->access_control == AccessControl::Private) {
+  if (!property || property->IsStatic() || property->IsFinal() ||
+      property->GetAccessControl() == AccessControl::Private) {
     return false;
   }
   return true;
@@ -308,7 +354,7 @@ bool ClassInfo::PropertyIsInheritAble(string key) {
 
 bool ClassInfo::PropertyIsStatic(string key) {
   auto property = GetProperty(key);
-  if (!property || !property->is_static) {
+  if (!property || !property->IsStatic()) {
     return false;
   }
   return true;

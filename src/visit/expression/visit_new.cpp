@@ -47,8 +47,7 @@ antlrcpp::Any ModuleVisitor::visitNewExpression(TypeScriptParser::NewExpressionC
 
     if (real_arguments.size() > 0) {
       for (auto &temp_node_value : real_arguments) {
-        scope->NodeValueInitLlvmValueInfo(builder, temp_node_value.get());
-        arguments.push_back(scope->LoadToRegister(builder, temp_node_value->GetLlvmValueInfo()));
+        arguments.push_back(temp_node_value->GetLlvmValueInfo()->value);
       }
     }
 

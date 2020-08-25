@@ -61,7 +61,7 @@ antlrcpp::Any ModuleVisitor::visitForStatement(TypeScriptParser::ForStatementCon
   }
 
   /// save to scope
-  scope->SetTrunkBlock(ThunkBB);
+  scope->SetMergeBlock(ThunkBB);
   scope->SetContinueJumpBlock(FinalExpressionBB);
 
   /// visit condition
