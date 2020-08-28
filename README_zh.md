@@ -1,9 +1,10 @@
 # Tser
 一个TypeScript虚拟机。
 
-Switch Language: [English](./README.md)。
+切换语言: [English](./README.md)。
 
 #### 安装使用
+> 支持`MacOS 10.13+`
 ```bash
 $ brew tap tser-project/tser && brew install tser;
 
@@ -42,6 +43,8 @@ Tser前端依托于Antlr来生成的语法解析器，然后进行语法树的�
 
 ## Tser语法支持
 > 可参考[__test](./__test/)目录下的测试文件。
+
+> Tser语法支持会持续完善。
 
 ### 变量
 支持`var` `let` `const`, `var`与`let`相同。
@@ -107,40 +110,56 @@ Tser是一个巨大的工程，很难用一己之力完成。Tser现在还是一
 
 ### 环境安装
 1. 安装`cmake`、`make`
-2. 安装 [LLVM](http://clang.llvm.org/get_started.html) 
-3. 安装 [Antlr](https://www.antlr.org/download/)
-4. 环境变量配置
+2. 安装或构建 [LLVM](http://clang.llvm.org/get_started.html)，或`$ brow install llvm`
+3. 构建 [Antlr](https://www.antlr.org/download/)、[antlr4 build runtime](https://github.com/antlr/antlr4/tree/master/runtime/Cpp)
+    - 构建完成后建立软链或拷贝文件到`lib/antlr`，目录结构为:
+        ```
+        —— lib
+          |—— antlr
+            |—— include
+              |—— antlr4-runtime
+            |—— lib
+              |—— libantlr4-runtime.a
+            |—— share
+        —— src
+        ```
+4. 安装Boost: `$ brew install boost`
+5. 环境变量配置
     ```bash
     # Clang
     export CC=/usr/bin/clang
     export CXX=/usr/bin/clang++
 
-    # LLVM
-    export PATH="/Users/vifird/C/compile/llvm-project/build/bin:$PATH"
+    # LLVM (Your path of llvm)
+    export PATH="/usr/local/Cellar/llvm/10.0.1/bin:$PATH"
 
     # Antlr
-    export ANTLR_RUNTIME=${Path of runtime}/runtime/usr/local
     alias antlr4='java -jar /usr/local/lib/antlr-4.8-complete.jar'
     alias grun='java org.antlr.v4.gui.TestRig'
-    export ANTLR_EXECUTABLE=/usr/local/lib/antlr-4.8-complete.jar
     export CLASSPATH=".:/usr/local/lib/antlr-4.8-complete.jar:$CLASSPATH"
     ```
 
-### 构建命令
+### 自行构建
+```bash
+# 构建
+$ make build-parser
+$ make build
+
+# 使用
+$ ./dist/bin/tser __test/basic/7_function.ts
+```
+#### 其他命令
 - `make build-debug` : 构建调试包（开发时LLVM建议使用Debug模式构建）
 - `make build` : 构建生产包
 - `make build-builtin` : 构建内置对象
 - `make build-parser` : 重新生成语法解析器
+- `make generate-parser` : 重新生成Parser和`Grun`工具
 - `make grun` : 可视化查看TS代码生成的语法树
 
 ## 捐赠支持
-<a target="_blank" href="https://github.com/lanistor/assets/blob/master/tser/support_tser_zfb.jpg">捐赠给Tser</a>，以支持作者继续创作Tser。
+<a target="_blank" href="https://github.com/lanistor/assets/blob/master/tser/support_tser_zfb.jpg">捐赠给Tser</a>，以支持作者持续完善Tser。
 
 ## 友情链接
 | 支持产品                   | 介绍                                 |
 | ----                      | ----                                 |
 | <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm">闪点清单<br/>一款独特的悬浮清单软件</a>                 | <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm"><img src="https://gitee.com/flickerlist/assets/raw/master/banner/pc_float_1000x240.gif" width="400"/></a>  |
-
-
-
-

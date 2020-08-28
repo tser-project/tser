@@ -5,9 +5,10 @@
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include <iostream>
 #include <string>
+
 // fs include
 #ifdef TSER_TARGET_MAC
 #include <mach-o/dyld.h>
@@ -22,7 +23,7 @@ using namespace std;
 using namespace antlr4;
 using namespace llvm;
 using namespace llvm::orc;
-using namespace filesystem;
+namespace fs = boost::filesystem;
 
 /// get tser executeable file path
 string GetTserExecutablePath() {
@@ -44,13 +45,14 @@ string GetTserExecutablePath() {
 
 /// get tser executeable project path
 string GetTserRootPath() {
-  return filesystem::canonical(GetTserExecutablePath()).parent_path().parent_path();
+  fs::path p(GetTserExecutablePath());
+  return p.parent_path().parent_path().string();
 }
 
 /// get path in tser project
 string tser::fsutils::GetPathInTser(int size, string paths[]) {
 
-  auto project_path = filesystem::canonical(GetTserRootPath());
+  auto project_path = fs::path(GetTserRootPath());
   for (int i = 0; i < size; i++) {
     if (paths[ i ] == "..") {
       project_path = project_path.parent_path();
@@ -58,13 +60,13 @@ string tser::fsutils::GetPathInTser(int size, string paths[]) {
       project_path.append(paths[ i ]);
     }
   }
-  return project_path;
+  return project_path.string();
 }
 
 /// get path from current path of terminal
 string tser::fsutils::GetPathStartFromCurrent(int size, string paths[]) {
 
-  auto current_path = filesystem::current_path();
+  auto current_path = fs::current_path();
   for (int i = 0; i < size; i++) {
     if (paths[ i ] == "..") {
       current_path = current_path.parent_path();
@@ -72,7 +74,7 @@ string tser::fsutils::GetPathStartFromCurrent(int size, string paths[]) {
       current_path.append(paths[ i ]);
     }
   }
-  return current_path;
+  return current_path.string();
 }
 
 unique_ptr<Module> tser::fsutils::CreateModuleFromFile(TserProcess *process, char *file_path, LLVMContext &context,
@@ -82,6 +84,11 @@ unique_ptr<Module> tser::fsutils::CreateModuleFromFile(TserProcess *process, cha
 
   string module_name = file_path;
   DebugPrintln("module name: %s", module_name.data());
+
+  if (!fs::exists(file_path)) {
+    cerr << "[Error] File not exist: " << file_path << endl;
+    return nullptr;
+  }
 
   ifstream ifs;
   ifs.open(file_path);

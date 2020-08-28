@@ -29,9 +29,9 @@ build-main: clean-main-build
 
 # build main executable binary file for debug
 build-main-debug: clean-main-build
-	pushd build; \
+	mkdir -p build && pushd build; \
 	cmake .. -DCMAKE_BUILD_TYPE=Debug; \
-	make -j4; \
+	make -j8; \
 	popd;
 
 # clean tser build
@@ -42,9 +42,9 @@ clean-main-build:
 
 # build builtin functions, linking while running
 build-builtin: clean-builtin
-	pushd src/builtin/build; \
+	mkdir -p src/builtin/build && pushd src/builtin/build; \
 	cmake ..; \
-	make; \
+	MACOSX_DEPLOYMENT_TARGET=10.13.6 make; \
 	ld -r CMakeFiles/builtin.dir/*.cpp.o -o builtin.o;
 
 # clean build of builtin
@@ -54,12 +54,11 @@ clean-builtin:
 ### for parser ###
 
 # build TypeScript parser
-build-parser: generate-parser
-	pushd src/grammar/build; \
+build-parser: 
+	rm -rf ./src/grammar/build/* && mkdir -p ./src/grammar/build && pushd src/grammar/build; \
 	cmake ..; \
 	make -j8; \
 	popd;
-	make generate-parser-grun;
 
 # run AST's GUI review
 parser-grun:
@@ -72,21 +71,20 @@ generate-parser: clean-parser
 	$(ANTLR) -Dlanguage=Cpp TypeScriptLexer.g4 -visitor; \
 	$(ANTLR) -Dlanguage=Cpp TypeScriptParser.g4 -visitor; \
 	popd;
+	make generate-parser-grun;
 
 # generate grun code, for AST's GUI review (use java, antlr grun doesn't support c++)
 generate-parser-grun:
-	mkdir -p .grun;
-	rm -rf .grun/*;
+	mkdir -p .grun && rm -rf .grun/*;
 	cp src/grammar/TypeScriptLexer.g4 .grun/TypeScriptLexer.g4;
 	cp src/grammar/TypeScriptParser.g4 .grun/TypeScriptParser.g4;
-	pushd .grun; \
+	mkdir -p .grun && pushd .grun; \
 	$(ANTLR) TypeScriptLexer.g4 TypeScriptParser.g4 -visitor; \
 	javac TypeScript*.java; \
 	popd;
 
 # clean parser c++ code and built output
 clean-parser:
-	rm -rf ./src/grammar/build/*;
 	rm -rf ./src/grammar/*.cpp
 	rm -rf ./src/grammar/*.h
 	rm -rf ./src/grammar/*.interp

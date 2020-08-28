@@ -3,6 +3,7 @@ dist
 packages
 build
 .grun
+lib/antlr
 CMakeFiles
 .vscode/c_cpp_properties.json
 .vscode/launch.json
@@ -12,6 +13,7 @@ __test/temp
 
 # Prerequisites
 *.d
+.DS_Store
 
 # Compiled Object files
 *.slo
@@ -22,23 +24,3 @@ __test/temp
 # Precompiled Headers
 *.gch
 *.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
