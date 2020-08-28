@@ -94,7 +94,7 @@ Class支持继承、多态，支持Class组合，支持静态属性与静态方�
 ### 内置对象
 目前内置对象支持力度非常低，仅用于测试。
 
-| 内置对象                      | 方法                               |
+| 内置对象                    | 方法                                 |
 | ----                      | ----                                 |
 | `console`                 | `debug` `log` `info` `warn` `error`  |
 | `Date`                    | `now`                                | 
@@ -134,11 +134,13 @@ Tser是一个巨大的工程，很难用一己之力完成。Tser现在还是一
 - `make grun` : 可视化查看TS代码生成的语法树
 
 ## 捐赠支持
-支持作者继续创作Tser。
-
-<img src="https://gitee.com/lanistor/assets/raw/master/tser/support_tser_zfb.jpg" style="border:1px solid #eee" width=260/>
+<a target="_blank" href="https://github.com/lanistor/assets/blob/master/tser/support_tser_zfb.jpg">捐赠给Tser</a>，以支持作者继续创作Tser。
 
 ## 友情链接
-<a target="_new" href="https://flicker.cool/?mark=tser_github_rm"><img src="https://gitee.com/flickerlist/assets/raw/master/banner/pc_float_1000x240.gif" width="500"/></a>
+| 支持产品                   | 介绍                                 |
+| ----                      | ----                                 |
+| <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm">闪点清单，一款独特的悬浮清单软件</a>                 | <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm"><img src="https://gitee.com/flickerlist/assets/raw/master/banner/pc_float_1000x240.gif" width="360"/></a>  |
+
+
 
 
