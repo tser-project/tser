@@ -38,7 +38,7 @@ Tser目前能做的事情还非常少，因为语法支持很不完善，仅能�
 ## Tser技术原理
 Tser前端依托于Antlr来生成的语法解析器，然后进行语法树的生成与遍历；后端依托于LLVM建设，将TS代码编译为LLVM IR，并使用其JIT引擎立即执行IR。
 
-业界雷同产品: [assemblyscript](https://www.assemblyscript.org/)、[StaticScript](https://github.com/ovr/StaticScript)
+业界雷同产品: [AssemblyScript](https://www.assemblyscript.org/)、[StaticScript](https://github.com/ovr/StaticScript)
 
 ## Tser语法支持
 > 可参考[__test](./__test/)目录下的测试文件。
@@ -139,7 +139,7 @@ Tser是一个巨大的工程，很难用一己之力完成。Tser现在还是一
 ## 友情链接
 | 支持产品                   | 介绍                                 |
 | ----                      | ----                                 |
-| <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm">闪点清单，一款独特的悬浮清单软件</a>                 | <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm"><img src="https://gitee.com/flickerlist/assets/raw/master/banner/pc_float_1000x240.gif" width="360"/></a>  |
+| <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm">闪点清单<br/>一款独特的悬浮清单软件</a>                 | <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm"><img src="https://gitee.com/flickerlist/assets/raw/master/banner/pc_float_1000x240.gif" width="400"/></a>  |
 
 
 
