@@ -162,4 +162,4 @@ $ ./dist/bin/tser __test/basic/7_function.ts
 ## 友情链接
 | 支持产品                   | 介绍                                 |
 | ----                      | ----                                 |
-| <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm">闪点清单<br/>一款独特的悬浮清单软件</a>                 | <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm"><img src="https://gitee.com/flickerlist/assets/raw/master/banner/pc_float_1000x240.gif" width="400"/></a>  |
+| <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm">【闪点清单】<br/>一款独特的悬浮清单软件</a>                 | <a target="_blank" href="https://flicker.cool/?mark=tser_github_rm"><img src="https://raw.githubusercontent.com/lanistor/assets/master/tser/ads/flicker/flicker_gif_500x120.gif" width="400"/></a>  |
